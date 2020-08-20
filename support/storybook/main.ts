@@ -1,5 +1,7 @@
 import { Configuration } from 'webpack';
+import WorkerPlugin from 'worker-plugin';
 
+// eslint-disable-next-line import/no-default-export
 export default {
   stories: ['./stories/*.stories.tsx'],
   addons: ['@storybook/addon-actions', '@storybook/addon-links'],
@@ -11,6 +13,7 @@ export default {
     });
 
     config.resolve?.extensions?.push('.ts', '.tsx');
+    config.plugins?.push(new WorkerPlugin());
 
     return config;
   },

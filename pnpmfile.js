@@ -16,6 +16,11 @@ function readPackage(pkg, context) {
 
   updatePackage({ name: 'serialize-javascript', version: '^4.0.0' });
   updatePackage({ name: 'bl', version: '>=4.0.3' });
+  updatePackage({ name: 'type-fest', version: '^0.16.0' });
+  updatePackage({
+    name: 'monaco-editor',
+    version: 'npm:@typescript-deploys/monaco-editor@4.1.0-dev.20200906',
+  });
 
   return pkg;
 }
