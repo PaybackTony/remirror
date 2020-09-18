@@ -1,5 +1,13 @@
 import { ErrorConstant, ExtensionPriority } from '@remirror/core-constants';
-import { entries, invariant, isEmptyArray, object, uniqueArray } from '@remirror/core-helpers';
+import {
+  entries,
+  invariant,
+  isEmptyArray,
+  isFunction,
+  isNumber,
+  object,
+  uniqueArray,
+} from '@remirror/core-helpers';
 import type {
   AnyFunction,
   CommandFunction,
@@ -10,12 +18,13 @@ import type {
   FromToParameter,
   PrimitiveSelection,
   ProsemirrorAttributes,
+  Static,
   Transaction,
   Value,
 } from '@remirror/core-types';
 import { getTextSelection } from '@remirror/core-utils';
 import { TextSelection } from '@remirror/pm/state';
-import type { EditorView } from '@remirror/pm/view';
+import { Decoration, DecorationSet, EditorView } from '@remirror/pm/view';
 
 import { extensionDecorator } from '../decorators';
 import {
@@ -35,6 +44,22 @@ import type {
   StateUpdateLifecycleParameter,
 } from '../types';
 
+export interface CommandOptions {
+  /**
+   * The className that is added to all tracker positions
+   *
+   * '@default 'remirror-tracker-position'
+   */
+  trackerClassName?: Static<string>;
+
+  /**
+   * The default element that is used for all trackers.
+   *
+   * @default 'span'
+   */
+  trackerNodeName?: Static<string>;
+}
+
 /**
  * Generate chained and unchained commands for making changes to the editor.
  *
@@ -45,8 +70,12 @@ import type {
  *
  * @builtin
  */
-@extensionDecorator({ defaultPriority: ExtensionPriority.Highest })
-export class CommandsExtension extends PlainExtension {
+@extensionDecorator<CommandOptions>({
+  defaultPriority: ExtensionPriority.Highest,
+  defaultOptions: { trackerClassName: 'remirror-tracker-position', trackerNodeName: 'span' },
+  staticKeys: ['trackerClassName', 'trackerNodeName'],
+})
+export class CommandsExtension extends PlainExtension<CommandOptions> {
   get name() {
     return 'commands' as const;
   }
@@ -180,7 +209,7 @@ export class CommandsExtension extends PlainExtension {
    * Create the default commands available to all extensions.
    */
   createCommands() {
-    return {
+    const commands = {
       /**
        * Enable custom commands to be used within the editor by users.
        *
@@ -238,6 +267,25 @@ export class CommandsExtension extends PlainExtension {
           return true;
         };
       },
+
+      /**
+       * Insert text into the dom asynchronously by preserving the current insertion position.
+       */
+      insertTextAsync: (promise: Promise<string>, range?: Partial<FromToParameter>) =>
+        asyncCommand({
+          promise,
+          immediate: commands.addPositionTracker({ id: promise, ...range }),
+          onDone: ({ value, ...rest }) => {
+            const range = this.findPositionTracker(promise);
+            this.removePositionTracker({ id: promise, tr: rest.tr });
+
+            if (!range) {
+              return false;
+            }
+
+            return commands.insertText(value, range)(rest);
+          },
+        }),
 
       /**
        * Select the text within the provided range.
@@ -321,14 +369,104 @@ export class CommandsExtension extends PlainExtension {
           return true;
         };
       },
+
+      /**
+       * Command to dispatch a transaction adding the tracker position to be tracked.
+       * If no position parameter is specified it uses the current position.
+       */
+      addPositionTracker: (tracker: AddPositionTrackerParameter): CommandFunction => ({
+        dispatch,
+        tr,
+      }) => {
+        return this.addPositionTracker({ ...tracker, tr, checkOnly: !dispatch })
+          ? (dispatch?.(tr), true)
+          : false;
+      },
+
+      /**
+       * A command to remove the specified tracker position.
+       */
+      removePositionTracker: (id: unknown): CommandFunction => ({ dispatch, tr }) => {
+        return this.removePositionTracker({ id, tr, checkOnly: !dispatch })
+          ? (dispatch?.(tr), true)
+          : false;
+      },
+
+      /**
+       * A command to remove all active tracker positions.
+       */
+      clearPositionTrackers: (): CommandFunction => ({ tr, dispatch }) => {
+        return this.clearPositionTrackers({ tr, checkOnly: !dispatch })
+          ? (dispatch?.(tr), true)
+          : false;
+      },
     };
+
+    return commands;
   }
 
   /**
    * This plugin is here only to keep track of the `forcedUpdates` meta data.
    */
   createPlugin(): CreatePluginReturn {
-    return {};
+    return {
+      state: {
+        init: () => {
+          return DecorationSet.empty;
+        },
+        apply: (tr, decorationSet: DecorationSet) => {
+          // Map the decoration based on the changes to the document.
+          decorationSet = decorationSet.map(tr.mapping, tr.doc);
+
+          // Get tracker updates from the meta data
+          const { added, clearTrackers, removed } = this.getMeta(tr);
+
+          if (clearTrackers) {
+            return DecorationSet.empty;
+          }
+
+          for (const add of added) {
+            const { className, nodeName, id, from, to } = add;
+
+            let deco: Decoration;
+
+            if (from === to) {
+              const widget = document.createElement(nodeName);
+              widget.classList.add(className);
+              deco = Decoration.widget(from, document.createElement(nodeName), {
+                id,
+                type: this.name,
+              });
+            } else {
+              deco = Decoration.inline(
+                from,
+                to,
+                { nodeName, class: className },
+                { id, type: this.name },
+              );
+            }
+
+            decorationSet = decorationSet.add(tr.doc, [deco]);
+          }
+
+          for (const id of removed) {
+            const found = decorationSet.find(
+              undefined,
+              undefined,
+              (spec) => spec.id === id && spec.name === this.name,
+            );
+            decorationSet = decorationSet.remove(found);
+          }
+
+          return decorationSet;
+        },
+      },
+      props: {
+        decorations: () => {
+          return this.getPluginState();
+        },
+      },
+    };
   }
 
   /**
@@ -338,7 +476,9 @@ export class CommandsExtension extends PlainExtension {
    * the unique symbol to update the key.
    */
   private readonly forceUpdate = (tr: Transaction, ...keys: UpdatableViewProps[]): Transaction => {
-    this.setMeta(tr, ...keys);
+    const { forcedUpdates } = this.getMeta(tr);
+
+    this.setMeta(tr, { forcedUpdates: uniqueArray([...forcedUpdates, ...keys]) });
     return tr;
   };
 
@@ -351,20 +491,24 @@ export class CommandsExtension extends PlainExtension {
    * - `attributes` - for the top level node
    */
   private readonly getForcedUpdates = (tr: Transaction): ForcedUpdateMeta => {
-    return this.getMeta(tr);
+    return this.getMeta(tr).forcedUpdates;
   };
 
-  private getMeta(tr: Transaction): ForcedUpdateMeta {
-    return tr.getMeta(this.pluginKey) ?? [];
+  /**
+   * Get the command metadata
+   */
+  private getMeta(tr: Transaction): Required<CommandExtensionMeta> {
+    const meta = tr.getMeta(this.pluginKey) ?? {};
+    return { ...DEFAULT_COMMAND_META, ...meta };
   }
 
-  private setMeta(tr: Transaction, ...keys: UpdatableViewProps[]) {
+  private setMeta(tr: Transaction, update: CommandExtensionMeta) {
     const meta = this.getMeta(tr);
-    tr.setMeta(this.pluginKey, uniqueArray([...meta, ...keys]));
+    tr.setMeta(this.pluginKey, { ...meta, ...update });
   }
 
   /**
-   * Add the commands fro the provided `commands` property to the `chained` and
+   * Add the commands from the provided `commands` property to the `chained` and
    * `unchained` objects.
    */
   private addCommands(parameter: AddCommandsParameter) {
@@ -455,7 +599,7 @@ export class CommandsExtension extends PlainExtension {
   /**
    * Get the non-chainable commands.
    *
-   * @deprecated
+   * @deprecated use `this.store.commands` instead.
    */
   private readonly getCommands = <
     ExtensionUnion extends AnyExtension = AnyExtension
@@ -465,13 +609,163 @@ export class CommandsExtension extends PlainExtension {
 
     return commands as CommandsFromExtensions<CommandsExtension | ExtensionUnion>;
   };
+
+  /**
+   * Add a tracker position with the specified params to the transaction and return the transaction.
+   *
+   * It is up to you to dispatch the transaction or you can just use the commands.
+   */
+  private addPositionTracker(
+    parameter: AddPositionTrackerParameter & { tr: Transaction; checkOnly?: boolean },
+  ): boolean {
+    const { tr, checkOnly = false, id, ...rest } = parameter;
+    const existingPosition = this.findPositionTracker(id);
+
+    if (existingPosition) {
+      return false;
+    }
+
+    if (checkOnly) {
+      return true;
+    }
+
+    const { added } = this.getMeta(tr);
+    const { trackerClassName, trackerNodeName } = this.options;
+    const { from, to, className, nodeName = trackerNodeName } = rest;
+
+    const classes = (className ? [trackerClassName, className] : [trackerClassName]).join(' ');
+
+    this.setMeta(tr, {
+      added: [
+        ...added,
+        {
+          id,
+          from: isNumber(from) ? from : tr.selection.from,
+          to: isNumber(to) ? to : tr.selection.to,
+          nodeName,
+          className: classes,
+        },
+      ],
+    });
+
+    return true;
+  }
+
+  /**
+   * Discards a previously defined tracker once not needed.
+   *
+   * This should be used to cleanup once the position is no longer needed.
+   */
+  private removePositionTracker(parameter: {
+    id: unknown;
+    tr: Transaction;
+    checkOnly?: boolean;
+  }): boolean {
+    const { id, tr, checkOnly = false } = parameter;
+    const existingPosition = this.findPositionTracker(id);
+
+    if (!existingPosition) {
+      return false;
+    }
+
+    if (checkOnly) {
+      return true;
+    }
+
+    const { removed } = this.getMeta(tr);
+    this.setMeta(tr, { removed: uniqueArray([...removed, id]) });
+
+    return true;
+  }
+
+  /**
+   * This helper returns a transaction that clears all position trackers when any exist.
+   *
+   * Otherwise it returns undefined.
+   */
+  private clearPositionTrackers(parameter: { tr: Transaction; checkOnly?: boolean }): boolean {
+    const { tr, checkOnly = false } = parameter;
+    const positionTrackerState = this.getPluginState();
+
+    if (positionTrackerState === DecorationSet.empty) {
+      return false;
+    }
+
+    if (checkOnly) {
+      return true;
+    }
+
+    this.setMeta(tr, { clearTrackers: true });
+    return true;
+  }
+
+  /**
+   * Find the position for the tracker with the ID specified.
+   *
+   * @param id - the unique position id which can be any type
+   */
+  private findPositionTracker(id: unknown): FromToParameter | undefined {
+    const decorations = this.getPluginState<DecorationSet>();
+    const found = decorations.find(undefined, undefined, (spec) => spec.id === id)?.[0];
+
+    return found ? { from: found.from, to: found.to } : undefined;
+  }
 }
+
+const DEFAULT_COMMAND_META: Required<CommandExtensionMeta> = {
+  added: [],
+  clearTrackers: false,
+  forcedUpdates: [],
+  removed: [],
+};
 
 /**
  * Provides the list of Prosemirror EditorView props that should be updated/
  */
 export type ForcedUpdateMeta = UpdatableViewProps[];
 export type UpdatableViewProps = 'attributes' | 'editable' | 'nodeViews';
+
+export interface CommandExtensionMeta {
+  forcedUpdates?: UpdatableViewProps[];
+
+  /**
+   * The trackers to add.
+   */
+  added?: Array<Required<AddPositionTrackerParameter>>;
+
+  /**
+   * The trackers to remove.
+   */
+  removed?: unknown[];
+
+  /**
+   * When set to true will delete all the active trackers.
+   */
+  clearTrackers?: boolean;
+}
+
+interface AddPositionTrackerParameter extends Partial<FromToParameter> {
+  /**
+   * The ID by which this position will be uniquely identified. It can be any
+   * unknown value. A string, a function, an object, etc.
+   */
+  id: unknown;
+
+  /**
+   * A custom class name to use for the tracker position. All the trackers
+   * will automatically be given the class name `remirror-tracker-position`
+   *
+   * @default ''
+   */
+  className?: string;
+
+  /**
+   * A custom html element or string for a created element tag name.
+   *
+   * @default 'tracker'
+   */
+  nodeName?: string;
+}
 
 interface AddCommandsParameter {
   /** The currently amassed commands to mutate with new commands. */
@@ -517,6 +811,53 @@ interface ChainedFactoryParameter {
    * All the chained commands
    */
   chained: Record<string, any>;
+}
+
+interface AsyncCommandParameter<Value> {
+  immediate?: CommandFunction;
+  promise: (() => Promise<Value>) | Promise<Value>;
+  onDone: CommandFunction<EditorSchema, { value: Value }>;
+  onCancel?: () => void;
+}
+
+/**
+ * Support async commands in the editor.
+ *
+ * This is where the commands can be placed.
+ *
+ * @experimental This is still being worked on and subject to changes in
+ * structure.
+ *
+ * A possible better way would be have a separate extension for asynchronous
+ * commands and a method called `createAsyncCommands`.
+ */
+export function asyncCommand<Value>({
+  immediate,
+  promise,
+  onDone,
+  onCancel,
+}: AsyncCommandParameter<Value>): CommandFunction {
+  return (parameter) => {
+    const { view } = parameter;
+
+    if (immediate?.(parameter) === false) {
+      onCancel?.();
+      return false;
+    }
+
+    if (!view) {
+      return true;
+    }
+
+    const deferred = isFunction(promise) ? promise() : promise;
+
+    deferred.then((value) => {
+      // Run the command
+      onDone({ state: view.state, tr: view.state.tr, dispatch: view.dispatch, view, value });
+    });
+
+    return true;
+  };
 }
 
 /**
@@ -603,7 +944,8 @@ declare global {
        *
        * This pseudo property makes it easier to infer Generic types of this
        * class.
-       * @private
+       *
+       * @internal
        */
       ['~C']: this['createCommands'] extends AnyFunction
         ? ReturnType<this['createCommands']>
@@ -633,7 +975,7 @@ declare global {
        *       haveFun() {
        *         return ({ state, dispatch }) => {
        *           if (dispatch) {
-       *             dispatch(tr.insertText(...));
+       *             dispatch(tr.insertText('Have fun!'));
        *           }
        *
        *           return true; // True return signifies that this command is enabled.
@@ -650,8 +992,6 @@ declare global {
        *
        * Another benefit of commands is that they are picked up by typescript
        * and can provide code completion for consumers of the extension.
-       *
-       * @param parameter - schema parameter with type included
        */
       createCommands?(): ExtensionCommandReturn;
     }
@@ -683,7 +1023,7 @@ declare global {
        * `createCommands` function then make sure it is used within the returned
        * function scope and not in the outer scope.
        */
-      commands: CommandsFromExtensions<CommandsExtension | AnyExtension>;
+      commands: CommandsFromExtensions<Value<AllExtensions> | AnyExtension>;
 
       /** @deprecated Use `this.store.commands` instead. */
       getCommands: <ExtensionUnion extends AnyExtension = AnyExtension>() => CommandsFromExtensions<

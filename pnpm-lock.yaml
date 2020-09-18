@@ -38,6 +38,7 @@ importers:
       '@typescript-eslint/parser': 4.1.0_eslint@7.9.0+typescript@4.0.2
       babel-jest: 26.3.0_@babel+core@7.11.6
       babel-plugin-annotate-pure-calls: 0.4.0_@babel+core@7.11.6
+      babel-plugin-dev-expression: 0.2.2_@babel+core@7.11.6
       babel-plugin-macros: 2.8.0
       babel-plugin-transform-react-remove-prop-types: 0.4.24
       case-anything: 1.1.2
@@ -124,6 +125,7 @@ importers:
       '@typescript-eslint/parser': ^4.1.0
       babel-jest: ^26.3.0
       babel-plugin-annotate-pure-calls: ^0.4.0
+      babel-plugin-dev-expression: ^0.2.2
       babel-plugin-macros: ^2.8.0
       babel-plugin-transform-react-remove-prop-types: ^0.4.24
       case-anything: ^1.1.1
@@ -674,16 +676,6 @@ importers:
       '@remirror/core': 1.0.0-next.39
       '@remirror/pm': 1.0.0-next.39
       linaria: ^2.0.0-rc.3
-  packages/@remirror/extension-position-tracker:
-    dependencies:
-      '@babel/runtime': 7.11.2
-    devDependencies:
-      '@remirror/core': 'link:../core'
-      '@remirror/pm': 'link:../pm'
-    specifiers:
-      '@babel/runtime': ^7.11.0
-      '@remirror/core': 1.0.0-next.39
-      '@remirror/pm': 1.0.0-next.39
   packages/@remirror/extension-positioner:
     dependencies:
       '@babel/runtime': 7.11.2
@@ -1115,7 +1107,7 @@ importers:
       react-use: 15.3.4_react-dom@16.13.1+react@16.13.1
       resize-observer-polyfill: 1.5.1
       type-fest: 0.16.0
-      use-isomorphic-layout-effect: 1.0.0_react@16.13.1
+      use-isomorphic-layout-effect: 1.0.0_5ce8f66b58dc92cd3f67a918e0e72f70
     devDependencies:
       '@remirror/core': 'link:../core'
       '@remirror/pm': 'link:../pm'
@@ -1632,7 +1624,6 @@ importers:
       '@remirror/extension-mention-atom': 'link:../@remirror/extension-mention-atom'
       '@remirror/extension-paragraph': 'link:../@remirror/extension-paragraph'
       '@remirror/extension-placeholder': 'link:../@remirror/extension-placeholder'
-      '@remirror/extension-position-tracker': 'link:../@remirror/extension-position-tracker'
       '@remirror/extension-positioner': 'link:../@remirror/extension-positioner'
       '@remirror/extension-react-component': 'link:../@remirror/extension-react-component'
       '@remirror/extension-react-ssr': 'link:../@remirror/extension-react-ssr'
@@ -1695,7 +1686,6 @@ importers:
       '@remirror/extension-mention-atom': 1.0.0-next.39
       '@remirror/extension-paragraph': 1.0.0-next.39
       '@remirror/extension-placeholder': 1.0.0-next.39
-      '@remirror/extension-position-tracker': 1.0.0-next.39
       '@remirror/extension-positioner': 1.0.0-next.39
       '@remirror/extension-react-component': 1.0.0-next.39
       '@remirror/extension-react-ssr': 1.0.0-next.39
@@ -8711,6 +8701,14 @@ packages:
       '@babel/core': ^7.10.5
     resolution:
       integrity: sha512-hjUd24Yhnr5NKtHpC2mcRBGjC6RUKGzSzjN9g5SdjT4WpL/JDlpmjyBf7vWsJJSXFvMIbzRyxF4lT9ukwOnj/w==
+  /babel-plugin-dev-expression/0.2.2_@babel+core@7.11.6:
+    dependencies:
+      '@babel/core': 7.11.6
+    dev: false
+    peerDependencies:
+      '@babel/core': ^7.0.0
+    resolution:
+      integrity: sha512-y32lfBif+c2FIh5dwGfcc/IfX5aw/Bru7Du7W2n17sJE/GJGAsmIk5DPW/8JOoeKpXW5evJfJOvRq5xkiS6vng==
   /babel-plugin-dynamic-import-node/2.3.3:
     dependencies:
       object.assign: 4.1.1
@@ -26378,18 +26376,6 @@ packages:
   /use-isomorphic-layout-effect/1.0.0_5ce8f66b58dc92cd3f67a918e0e72f70:
     dependencies:
       '@types/react': 16.9.49
-      react: 16.13.1
-    dev: false
-    peerDependencies:
-      '@types/react': '*'
-      react: ^16.8.0
-    peerDependenciesMeta:
-      '@types/react':
-        optional: true
-    resolution:
-      integrity: sha512-JMwJ7Vd86NwAt1jH7q+OIozZSIxA4ND0fx6AsOe2q1H8ooBUp5aN6DvVCqZiIaYU6JaMRJGyR0FO7EBCIsb/Rg==
-  /use-isomorphic-layout-effect/1.0.0_react@16.13.1:
-    dependencies:
       react: 16.13.1
     dev: false
     peerDependencies:

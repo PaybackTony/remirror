@@ -95,3 +95,36 @@ test('it can select text', () => {
   editor.commands.selectText({ from: 1, to: 3 });
   expect(editor.state.selection.empty).toBeFalse();
 });
+
+function sleep(msDelay: number) {
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      resolve();
+    }, msDelay);
+  });
+}
+
+describe('insertTextAsync', () => {
+  jest.useFakeTimers();
+
+  afterAll(() => {
+    jest.useRealTimers();
+  });
+
+  it('can insert text asynchronously', async () => {
+    const editor = renderEditor([]);
+    const { doc, p } = editor.nodes;
+    editor.add(doc(p('my <cursor>CODE!')));
+    const promise = sleep(100).then(() => 'AWESOME ');
+    editor.commands.insertTextAsync(promise);
+
+    editor.selectText('end').press('Enter').insertText('More text here.');
+
+    jest.runAllTimers();
+    await promise;
+
+    expect(editor.view.state.doc).toEqualRemirrorDocument(
+      doc(p('my AWESOME CODE!'), p('More text here.')),
+    );
+  });
+});
