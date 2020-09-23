@@ -12,10 +12,21 @@ import {
   emojiSuggestionsItemStyles,
 } from '../social-styles';
 
+export interface SocialEmojiComponentProps<
+  Data
+> {
+  /**
+   * Which direction to open the suggestion list, either "up" or "down", defaults to "down"
+   *
+   * @default "down"
+   */
+  direction?: string;
+}
+
 /**
  * This component renders the emoji suggestion dropdown for the user.
  */
-export const SocialEmojiComponent: FC = () => {
+export const SocialEmojiComponent: FC<SocialEmojiComponentProps> = ({ direction: 'down' }) => {
   const state = useEmoji();
   const [isFocused, focus] = useEditorFocus();
   const [isClicking, setIsClicking] = useState(false);
@@ -35,15 +46,20 @@ export const SocialEmojiComponent: FC = () => {
     setIsClicking(true);
     setTimeout(() => setIsClicking(false), 2000);
   }, []);
+  
+  const emojiWrapperStyle = (props.direction == 'down') ? {
+        top: bottom,
+        left: left,
+      } : {
+        bottom: bottom,
+        left: left,
+      };
 
   return (
     <div
       {...getMenuProps({ ref, onMouseDown })}
       className={emojiSuggestionsDropdownWrapperStyles}
-      style={{
-        top: bottom,
-        left: left,
-      }}
+      style={emojiWrapperStyle}
     >
       {active &&
         (state?.list ?? []).map((emoji, index) => {
