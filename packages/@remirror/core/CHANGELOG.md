@@ -1,5 +1,13 @@
 # @remirror/core
 
+## 1.0.0-next.40
+
+> 2020-09-23
+
+### Patch Changes
+
+- [`cbf15ec4`](https://github.com/remirror/remirror/commit/cbf15ec4e38832ccf1495442c306d2c0bc6d6f2c) [#698](https://github.com/remirror/remirror/pull/698) Thanks [@ifiokjr](https://github.com/ifiokjr)! - Check `EditorView` has been added to framework before removing the focus and blur listeners.
+
 ## 1.0.0-next.39
 
 > 2020-09-16

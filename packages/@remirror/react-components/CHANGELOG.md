@@ -1,5 +1,15 @@
 # @remirror/react-components
 
+## 1.0.0-next.21
+
+> 2020-09-23
+
+### Patch Changes
+
+- Updated dependencies [[`cbf15ec4`](https://github.com/remirror/remirror/commit/cbf15ec4e38832ccf1495442c306d2c0bc6d6f2c), [`cbf15ec4`](https://github.com/remirror/remirror/commit/cbf15ec4e38832ccf1495442c306d2c0bc6d6f2c)]:
+  - @remirror/react@1.0.0-next.40
+  - @remirror/core@1.0.0-next.40
+
 ## 1.0.0-next.20
 
 > 2020-09-16

@@ -1,5 +1,21 @@
 # @remirror/react-social
 
+## 1.0.0-next.40
+
+> 2020-09-23
+
+### Patch Changes
+
+- Updated dependencies [[`cbf15ec4`](https://github.com/remirror/remirror/commit/cbf15ec4e38832ccf1495442c306d2c0bc6d6f2c), [`cbf15ec4`](https://github.com/remirror/remirror/commit/cbf15ec4e38832ccf1495442c306d2c0bc6d6f2c)]:
+  - @remirror/react@1.0.0-next.40
+  - @remirror/core@1.0.0-next.40
+  - @remirror/react-hooks@1.0.0-next.40
+  - @remirror/extension-auto-link@1.0.0-next.40
+  - @remirror/extension-emoji@1.0.0-next.40
+  - @remirror/extension-events@1.0.0-next.40
+  - @remirror/extension-mention@1.0.0-next.40
+  - @remirror/preset-social@1.0.0-next.40
+
 ## 1.0.0-next.39
 
 > 2020-09-16

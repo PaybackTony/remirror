@@ -1,5 +1,22 @@
 # @remirror/react
 
+## 1.0.0-next.40
+
+> 2020-09-23
+
+### Patch Changes
+
+- [`cbf15ec4`](https://github.com/remirror/remirror/commit/cbf15ec4e38832ccf1495442c306d2c0bc6d6f2c) [#698](https://github.com/remirror/remirror/pull/698) Thanks [@ifiokjr](https://github.com/ifiokjr)! - Fix bad `setState()` warning when rendering a controlled `RemirrorProvider` with child component. By wrapping the controlled state update within `useLayoutEffect` hook,updates now synchronously happen during the commit phase. `useEffect` caused errors in ProseMirror due to the asynchronous update.
+
+- Updated dependencies [[`cbf15ec4`](https://github.com/remirror/remirror/commit/cbf15ec4e38832ccf1495442c306d2c0bc6d6f2c)]:
+  - @remirror/core@1.0.0-next.40
+  - @remirror/extension-placeholder@1.0.0-next.40
+  - @remirror/extension-positioner@1.0.0-next.40
+  - @remirror/extension-react-component@1.0.0-next.40
+  - @remirror/extension-react-ssr@1.0.0-next.40
+  - @remirror/preset-core@1.0.0-next.40
+  - @remirror/preset-react@1.0.0-next.40
+
 ## 1.0.0-next.39
 
 > 2020-09-16

@@ -1,5 +1,21 @@
 # @remirror/extension-annotation
 
+## 1.0.0-next.40
+
+> 2020-09-23
+
+### Minor Changes
+
+- [`89bd1e86`](https://github.com/remirror/remirror/commit/89bd1e86e56c60ffbd94a7f5e75adca438d75555) [#702](https://github.com/remirror/remirror/pull/702) Thanks [@ronnyroeller](https://github.com/ronnyroeller)! - Visualize the amount of overlapping annotations
+
+  The annotation-extension would allow to style individual annotations via a CSS class. This led to issues with overlapping annotations. For example, if an annotation with a red background and another with a green background were overlapping, the editor would show (more or less) randomly one of the two colors. Now, the annotation-extension allows users to style decorations based on all overlapping annotations within a given decoration. The default implementation visualizes overlapping annotations by showing a darker shade the more annotations are overlapping.
+
+### Patch Changes
+
+- Updated dependencies [[`cbf15ec4`](https://github.com/remirror/remirror/commit/cbf15ec4e38832ccf1495442c306d2c0bc6d6f2c)]:
+  - @remirror/core@1.0.0-next.40
+  - @remirror/extension-positioner@1.0.0-next.40
+
 ## 1.0.0-next.39
 
 > 2020-09-16
